@@ -32,6 +32,7 @@ VMs needed for the current project are powered on at once. Windows Server roles 
 ## Conventions
 
 - **Network:** the primary lab LAN is `10.0.254.0/24`, isolated from the home network.
-- **Naming:** domain `ad.cooklab.com`; servers `DC1`, `DC2`, `cooklab-fw1`.
+- **Naming:** forests `ad.adeslab.com` (Project 01) and `corp.cyrlab.com` (Project 02);
+  servers `DC1`, `DC2`, `adeslab-fw1`.
 - **Automation:** all build steps are captured as PowerShell scripts under each
   project's `scripts/` folder so the lab is reproducible.

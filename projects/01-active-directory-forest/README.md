@@ -1,18 +1,17 @@
 # Project 01 — Active Directory Forest
 
-Stand up a single Active Directory forest (`ad.cooklab.com`) behind a pfSense firewall,
+Stand up a single Active Directory forest (`ad.adeslab.com`) behind a pfSense firewall,
 with two domain controllers, an organizational-unit structure, department security
 groups, a privileged-account model, and CSV-driven user provisioning.
 
-This mirrors Michael Cook's `smb-active-directory-infrastructure-pt-1`, right-sized to
-run on a 16 GB host under VMware Workstation Pro.
+Right-sized to run on a 16 GB host under VMware Workstation Pro.
 
 ## Architecture
 
 ```mermaid
 graph TD
     NET([Internet]) --- HOST["Host PC — VMware NAT (VMnet8)"]
-    HOST --- FW["cooklab-fw1 · pfSense CE<br/>WAN: DHCP · LAN: 10.0.254.1"]
+    HOST --- FW["adeslab-fw1 · pfSense CE<br/>WAN: DHCP · LAN: 10.0.254.1"]
     FW --- LAN{{"Lab LAN — VMnet2 (isolated)<br/>10.0.254.0/24"}}
     LAN --- DC1["DC1 · Server 2022 Core<br/>10.0.254.2<br/>AD DS · DNS · DHCP"]
     LAN --- DC2["DC2 · Server 2022 Core<br/>10.0.254.3<br/>AD DS · DNS"]
@@ -23,7 +22,7 @@ graph TD
 
 | VM | OS | Role | vCPU | RAM | Disk (on D:) | IP |
 |---|---|---|---|---|---|---|
-| `cooklab-fw1` | pfSense CE 2.7 | Firewall / NAT | 1 | 1 GB | 20 GB | WAN DHCP / LAN 10.0.254.1 |
+| `adeslab-fw1` | pfSense CE 2.7 | Firewall / NAT | 1 | 1 GB | 20 GB | WAN DHCP / LAN 10.0.254.1 |
 | `DC1` | Server 2022 Core | Primary DC, DNS, DHCP | 2 | 2.5 GB | 40 GB | 10.0.254.2 |
 | `DC2` | Server 2022 Core | Secondary DC, DNS | 2 | 2 GB | 40 GB | 10.0.254.3 |
 | `CL1` | Windows 10/11 | Test client (optional) | 2 | 2 GB | 40 GB | DHCP |
@@ -41,7 +40,7 @@ graph TD
 ## OU structure
 
 ```
-ad.cooklab.com/
+ad.adeslab.com/
 ├── IT/
 │   ├── Users/
 │   │   └── Privileged Accounts/
@@ -63,7 +62,7 @@ Microsoft 365 licensing.
 ## Build order
 
 1. Create the **VMnet2** isolated network in VMware Virtual Network Editor.
-2. Build and configure **pfSense** (`cooklab-fw1`) — WAN + LAN, NAT.
+2. Build and configure **pfSense** (`adeslab-fw1`) — WAN + LAN, NAT.
 3. Build **DC1**, set static IP, promote to a new forest — `01-Deploy-Forest-DC1.ps1`.
 4. Build **DC2**, join domain, promote as secondary DC — `02-Promote-DC2.ps1`.
 5. Create the **OU structure** — `03-Create-OUs.ps1`.
