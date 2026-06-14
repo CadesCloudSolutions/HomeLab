@@ -12,6 +12,8 @@
 # Secrets and credentials
 *.tfstate
 *.tfstate.*
+*.tfvars
+.terraform/
 *.pfx
 *.key
 *.pem

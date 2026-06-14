@@ -20,19 +20,27 @@ VMs needed for the current project are powered on at once. Windows Server roles 
 
 ## Projects
 
+### Infrastructure, Identity & Access
+
 | # | Project | Status |
 |---|---|---|
-| 01 | [Active Directory Forest](projects/01-active-directory-forest/) | 🟡 In progress |
-| 02 | Active Directory Forest Trust | ⚪ Planned |
-| 03 | SMB AD Infrastructure (segmented) | ⚪ Planned |
-| 04 | OpenVPN + RADIUS Authentication | ⚪ Planned |
-| 05 | OpenVPN Split-Tunnel | ⚪ Planned |
-| 06 | Hybrid Identity (Entra Connect over Azure S2S) | ⚪ Planned |
+| 01 | [SMB Active Directory Infrastructure — Part 1: Initial Setup](projects/smb-active-directory-infrastructure-pt-1/) | 🟡 In progress |
+| 02 | SMB Active Directory Infrastructure — Part 2: Hybrid Identity | ⚪ Planned |
+| 03 | Active Directory Forest Trust | ⚪ Planned |
+| 04 | SMB Active Directory Infrastructure — Segmented | ⚪ Planned |
+
+### Networking
+
+| # | Project | Status |
+|---|---|---|
+| 05 | OpenVPN + RADIUS Authentication | ⚪ Planned |
+| 06 | OpenVPN Split-Tunnel | ⚪ Planned |
+| 07 | Azure Site-to-Site VPN (on-prem ↔ Azure) | ⚪ Planned |
 
 ## Conventions
 
 - **Network:** the primary lab LAN is `10.0.254.0/24`, isolated from the home network.
-- **Naming:** forests `ad.adeslab.com` (Project 01) and `corp.cyrlab.com` (Project 02);
-  servers `DC1`, `DC2`, `adeslab-fw1`.
+- **Naming:** forests `ad.adeslab.com` (Project 01) and `corp.cyrlab.com` (the forest
+  trust, Project 03); servers `DC1`, `DC2`, `adeslab-fw1`.
 - **Automation:** all build steps are captured as PowerShell scripts under each
   project's `scripts/` folder so the lab is reproducible.

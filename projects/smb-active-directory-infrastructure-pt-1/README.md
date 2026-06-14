@@ -1,4 +1,4 @@
-# Active Directory Forest — Part 1: Initial Setup
+# Small-Medium Business Active Directory Infrastructure — Part 1: Initial Setup
 
 ## Introduction
 
@@ -144,5 +144,6 @@ from `data/users.csv` and placed in the correct OUs with department group member
 
 ## Next Steps
 
-With the forest established, the next project builds a second forest (`corp.cyrlab.com`)
-and configures an Active Directory forest trust between the two.
+With the forest established, the next project configures hybrid identity by installing
+Microsoft Entra Connect Sync on a dedicated member server, adding a routable UPN suffix,
+and synchronising users and groups to Microsoft Entra ID using Password Hash Sync.
