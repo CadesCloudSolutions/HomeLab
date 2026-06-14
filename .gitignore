@@ -1,0 +1,28 @@
+# Virtual machine artifacts (never commit VM disks/state)
+*.vmdk
+*.vmx
+*.vmsd
+*.vmem
+*.vmss
+*.nvram
+*.vmxf
+*.lck/
+*.iso
+
+# Secrets and credentials
+*.tfstate
+*.tfstate.*
+*.pfx
+*.key
+*.pem
+secrets/
+*-secrets.*
+*.creds
+unattend*.xml
+
+# OS / editor noise
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+*.tmp
