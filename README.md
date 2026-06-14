@@ -2,8 +2,7 @@
 
 A hands-on home lab documenting enterprise infrastructure, identity, and networking
 projects — built on a single workstation with VMware Workstation Pro and an Azure
-subscription. Inspired by [michaelacook/home-lab](https://github.com/michaelacook/home-lab),
-rebuilt and right-sized for my own hardware.
+subscription.
 
 ## Lab host
 
