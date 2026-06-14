@@ -47,14 +47,14 @@ lab stays sealed off behind two layers of NAT.
 
 The pfSense virtual machine is given two virtual network adapters: its WAN connected to
 `VMnet8` (NAT) and its LAN connected to `VMnet2` (the isolated lab network). I give it
-one virtual CPU, 1 GB of RAM and 20 GB of storage — for a lab that does not produce much
+two virtual CPUs, 1 GB of RAM and 20 GB of storage — for a lab that does not produce much
 outbound traffic, this sizing is more than enough.
 
 After running through the pfSense installation I assign the interfaces at the console:
 WAN to the NAT adapter, which receives an address automatically, and LAN set to
-`10.0.254.1` with a /24 mask. Because the lab LAN is fully isolated and the domain
-controllers run Server Core with no browser, the pfSense web configurator is reached from
-a virtual machine on the lab network rather than from the host. On the first page of the
+`10.0.254.1` with a /24 mask. Because the lab LAN is fully isolated, the pfSense web
+configurator is reached from `DC1` — which is installed with the Desktop Experience (GUI)
+and also serves as the first domain controller — rather than from the host. On the first page of the
 configuration wizard I give the firewall a hostname of `adeslab-fw1` and a domain of
 `adeslab.internal`, keeping the firewall's namespace separate from the Active Directory
 domain since the firewall is not domain-joined. The primary DNS server is set temporarily
@@ -69,22 +69,16 @@ rules are required at this stage. I also switch the DNS resolver from resolver m
 forward mode, which avoids DNSSEC-related name resolution failures by forwarding queries
 to the configured upstream server.
 
-```mermaid
-graph TD
-    NET([Internet]) --- HOST["Host PC — VMware NAT (VMnet8)"]
-    HOST --- FW["adeslab-fw1 · pfSense CE<br/>WAN: DHCP · LAN: 10.0.254.1"]
-    FW --- LAN{{"Lab LAN — VMnet2 (isolated)<br/>10.0.254.0/24"}}
-    LAN --- DC1["DC1 · Server 2022 Core<br/>10.0.254.2<br/>AD DS · DNS · DHCP"]
-    LAN --- DC2["DC2 · Server 2022 Core<br/>10.0.254.3<br/>AD DS · DNS"]
-    LAN --- CL1["CL1 · Windows 10/11<br/>DHCP · domain-joined test client"]
-```
-
 | VM | OS | Role | vCPU | RAM | Disk (on D:) | IP |
 |---|---|---|---|---|---|---|
-| `adeslab-fw1` | pfSense CE 2.7 | Firewall / NAT | 1 | 1 GB | 20 GB | WAN DHCP / LAN 10.0.254.1 |
-| `DC1` | Server 2022 Core | Primary DC, DNS, DHCP | 2 | 2.5 GB | 40 GB | 10.0.254.2 |
-| `DC2` | Server 2022 Core | Secondary DC, DNS | 2 | 2 GB | 40 GB | 10.0.254.3 |
-| `CL1` | Windows 10/11 | Test client (optional) | 2 | 2 GB | 40 GB | DHCP |
+| `adeslab-fw1` | pfSense CE 2.7.2 | Firewall / NAT | 2 | 1 GB | 20 GB | WAN DHCP / LAN 10.0.254.1 |
+| `DC1` | Server 2022 Datacenter (Desktop Experience) | Primary DC, DNS, DHCP | 4 | 4 GB | 40 GB | 10.0.254.2 |
+| `DC2` | Server 2022 Datacenter Core | Secondary DC, DNS | 4 | 3 GB | 100 GB | 10.0.254.3 |
+
+> The only adaptations from the reference lab are the hypervisor (VMware Workstation
+> instead of Proxmox) and the per-VM **RAM**, scaled to fit a 16 GB host (Mike uses
+> 8 GB per DC on a 128 GB machine). vCPU counts, disk sizes, OS editions, roles, domain
+> design and IP plan are identical.
 
 **IP addressing — `10.0.254.0/24`:**
 
@@ -94,7 +88,6 @@ graph TD
 | `adeslab-fw1` | LAN | `10.0.254.1` | static — default gateway |
 | `DC1` | LAN | `10.0.254.2` | static |
 | `DC2` | LAN | `10.0.254.3` | static |
-| `CL1` | LAN | `10.0.254.100`+ | DHCP (from DC1) |
 
 Reserved ranges: `.1–.10` infrastructure (static), `.100–.200` DHCP pool, `.201–.254`
 reserved for future use (e.g. a VPN client pool).
@@ -106,8 +99,10 @@ reserved for future use (e.g. a VPN client pool).
   DHCP server stays disabled.
 - **DCs** point their DNS at each other first, then themselves (DC1 → `10.0.254.3`,
   then `127.0.0.1`; DC2 → `10.0.254.2`, then `127.0.0.1`) to avoid DNS islanding.
-- **Clients** resolve via the DCs, never via pfSense. pfSense uses an upstream resolver
-  for its own traffic and performs NAT for all outbound lab connections.
+- **Domain members** (joined in later projects) will resolve via the DCs, never via
+  pfSense. The DHCP role and pool are configured now so that future clients receive the
+  correct DNS and gateway automatically. pfSense uses an upstream resolver for its own
+  traffic and performs NAT for all outbound lab connections.
 
 ## Server Configuration and Forest Creation
 
