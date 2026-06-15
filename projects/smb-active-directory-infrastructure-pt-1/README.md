@@ -45,6 +45,8 @@ lab stays sealed off behind two layers of NAT.
 | WAN | `VMnet8` | NAT (built-in) | pfSense WAN gets an address by DHCP; provides internet via the host |
 | LAN | `VMnet2` | Host-only (custom) | Subnet `10.0.254.0/24`; **VMware DHCP disabled**; **no host adapter** (fully isolated) |
 
+![Isolated VMnet2 host-only network in the Virtual Network Editor — DHCP disabled, no host adapter](images/vmnet2-config.png)
+
 The pfSense virtual machine is given two virtual network adapters: its WAN connected to
 `VMnet8` (NAT) and its LAN connected to `VMnet2` (the isolated lab network). I give it
 two virtual CPUs, 1 GB of RAM and 20 GB of storage — for a lab that does not produce much
@@ -60,6 +62,10 @@ configuration wizard I give the firewall a hostname of `adeslab-fw1` and a domai
 domain since the firewall is not domain-joined. The primary DNS server is set temporarily
 to Cloudflare's `1.1.1.1`, to be changed once the domain controllers are online.
 
+![pfSense console after install — WAN on em0 (DHCP) and LAN on em1 set to 10.0.254.1](images/pfsense-console.png)
+
+![pfSense web configurator login, reached from DC1 across the isolated LAN](images/pfsense-login.png)
+
 I accept the defaults on the WAN interface, including the rules that block RFC 1918 and
 bogon networks, and set the LAN interface to `10.0.254.1/24`. I chose `10.0.254.0/24`
 deliberately: a remote access VPN is added in a later project, and using the very common
@@ -67,12 +73,14 @@ deliberately: a remote access VPN is added in a later project, and using the ver
 in. Out of the box pfSense performs NAT and allows all outbound traffic, so no firewall
 rules are required at this stage. I also switch the DNS resolver from resolver mode to
 forward mode, which avoids DNSSEC-related name resolution failures by forwarding queries
-to the configured upstream server. 
+to the configured upstream server.
+
+![pfSense setup wizard — General Information: hostname adeslab-fw1, domain adeslab.internal, DNS servers](images/pfsense-wizard-general.png)
 
 | VM | OS | Role | vCPU | RAM | Disk (on D:) | IP |
 |---|---|---|---|---|---|---|
-| `adeslab-fw1` | pfSense CE 2.7.2 | Firewall / NAT | 2 | 1 GB | 20 GB | WAN DHCP / LAN 10.0.254.1 |
-| `DC1` | Server 2022 Datacenter (Desktop Experience) | Primary DC, DNS, DHCP | 4 | 4 GB | 40 GB | 10.0.254.10 |
+| `adeslab-fw1` | pfSense CE 2.7.2 | Firewall / NAT / DHCP | 2 | 1 GB | 20 GB | WAN DHCP / LAN 10.0.254.1 |
+| `DC1` | Server 2022 Datacenter (Desktop Experience) | Primary DC, DNS | 4 | 4 GB | 40 GB | 10.0.254.10 |
 | `DC2` | Server 2022 Datacenter Core | Secondary DC, DNS | 4 | 3 GB | 100 GB | 10.0.254.11 |
 
 > The only adaptations from the reference lab are the hypervisor (VMware Workstation
@@ -88,7 +96,7 @@ DHCP. On the lab LAN, addresses are allocated by purpose:
 | Range | Assignment | Purpose |
 |---|---|---|
 | `10.0.254.1` | Default gateway | pfSense firewall (`adeslab-fw1`) |
-| `10.0.254.10` | `DC1` | Primary DC — AD DS, DNS, DHCP |
+| `10.0.254.10` | `DC1` | Primary DC — AD DS, DNS |
 | `10.0.254.11` | `DC2` | Secondary DC — AD DS, DNS |
 | `10.0.254.20–29` | Core infrastructure servers | static (e.g. SQL, file/print) |
 | `10.0.254.30–49` | Application / member servers | static |
@@ -97,15 +105,43 @@ DHCP. On the lab LAN, addresses are allocated by purpose:
 
 **DHCP and DNS:**
 
-- **DHCP** runs on **DC1** (Windows DHCP role), serving the `.50–.200` client scope and
-  advertising both DCs as DNS servers and `10.0.254.1` as the gateway. pfSense's own
-  DHCP server stays disabled.
+- **DHCP** runs on **pfSense** (`adeslab-fw1`), serving the `.50–.200` client scope. Once
+  the DCs are online, the DHCP **DNS option** is set to advertise `10.0.254.10` / `.11`,
+  with `10.0.254.1` as the gateway.
 - **DCs** point their DNS at each other first, then themselves (DC1 → `10.0.254.11`,
   then `127.0.0.1`; DC2 → `10.0.254.10`, then `127.0.0.1`) to avoid DNS islanding.
 - **Domain members** (joined in later projects) will resolve via the DCs, never via
   pfSense. The DHCP role and pool are configured now so that future clients receive the
   correct DNS and gateway automatically. pfSense uses an upstream resolver for its own
   traffic and performs NAT for all outbound lab connections.
+
+**Connectivity and management**
+
+Outbound traffic from the lab reaches the internet through two layers of NAT. A lab
+machine on `VMnet2` (for example DC1) uses pfSense's LAN address `10.0.254.1` as its
+default gateway. pfSense routes that traffic out of its WAN interface (`em0`), which
+holds a `192.168.170.x` address leased by VMware's NAT service on `VMnet8`; VMware then
+NATs it again through the host's physical adapter to the home router and out to the
+internet:
+
+```
+DC1 (10.0.254.x)
+  → pfSense LAN (10.0.254.1)        # default gateway
+  → pfSense WAN (em0, 192.168.170.x) # NAT/route
+  → VMware NAT (VMnet8)              # second NAT
+  → host physical NIC → home router → Internet
+```
+
+Outbound connectivity is confirmed by pinging a public address from the firewall:
+
+![Internet connectivity verified from pfSense — ping 8.8.8.8, 0% packet loss](images/pfsense-ping-test.png)
+
+Because the lab LAN deliberately has no host adapter, the pfSense web configurator at
+`https://10.0.254.1` is **not** reachable from the host directly. It is managed from a
+virtual machine on the lab LAN — DC1 — which receives its address from pfSense's DHCP and
+reaches the firewall GUI over the same isolated `VMnet2` switch. This is the on-host
+equivalent of administering the firewall from the first domain controller, as in the
+reference lab.
 
 ## Server Configuration and Forest Creation
 
@@ -114,8 +150,8 @@ DHCP. On the lab LAN, addresses are allocated by purpose:
 2. Install the AD DS role and promote `DC1` to a new forest, `ad.adeslab.com`.
 3. Build `DC2` (Server 2022 Core), set `10.0.254.11`, join the domain, and promote it as
    a secondary domain controller and DNS server for redundancy.
-4. Configure DHCP on `DC1` to serve the `.50–.200` client scope and advertise both DCs as
-   DNS servers.
+4. On pfSense, set the DHCP scope's DNS option to advertise both DCs (`10.0.254.10` /
+   `.11`) now that they are online.
 
 ## Creating Organizational Units, Groups and Users
 

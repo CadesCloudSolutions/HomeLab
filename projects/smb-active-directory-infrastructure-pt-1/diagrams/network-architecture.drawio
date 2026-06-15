@@ -1,0 +1,43 @@
+<mxfile host="app.diagrams.net" version="24.0.0">
+  <diagram name="HomeLab Network" id="homelab-net">
+    <mxGraphModel dx="900" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="vmw" value="VMware Workstation Pro" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;fillColor=#f5f5f5;strokeColor=#666666;dashed=1;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="120" y="300" width="600" height="470" as="geometry" />
+        </mxCell>
+        <mxCell id="vmnet2" value="VMnet2 — Host-only / isolated · 10.0.254.0/24" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingLeft=10;spacingTop=6;fillColor=#e6f2ff;strokeColor=#3399ff;dashed=1;fontStyle=2;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="160" y="600" width="520" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="inet" value="Internet" style="shape=cloud;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="360" y="20" width="160" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="router" value="Home Router&#10;NAT · public IP" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="360" y="140" width="160" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="host" value="Home PC (Host)&#10;Ryzen 5 3600 · Windows 11" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="330" y="225" width="220" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="nat" value="VMnet8 — NAT · 192.168.170.0/24&#10;gateway .2 · DHCP .254" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="300" y="340" width="280" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="pfsense" value="adeslab-fw1 · pfSense CE 2.8.1&#10;WAN em0: 192.168.170.x&#10;LAN em1: 10.0.254.1&#10;NAT · Firewall · DHCP · DNS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="290" y="450" width="300" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="dc1" value="DC1 · Server 2022 (GUI)&#10;10.0.254.10&#10;AD DS · DNS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="210" y="640" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="dc2" value="DC2 · Server 2022 (Core)&#10;10.0.254.11&#10;AD DS · DNS" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="430" y="640" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="endArrow=none;html=1;strokeWidth=2;" edge="1" parent="1" source="inet" target="router"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" style="endArrow=none;html=1;strokeWidth=2;" edge="1" parent="1" source="router" target="host"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" style="endArrow=none;html=1;strokeWidth=2;" edge="1" parent="1" source="host" target="nat"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" value="WAN" style="endArrow=none;html=1;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="nat" target="pfsense"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" value="LAN" style="endArrow=none;html=1;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="pfsense" target="dc1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" style="endArrow=none;html=1;strokeWidth=2;" edge="1" parent="1" source="pfsense" target="dc2"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
