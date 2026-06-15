@@ -67,13 +67,13 @@ deliberately: a remote access VPN is added in a later project, and using the ver
 in. Out of the box pfSense performs NAT and allows all outbound traffic, so no firewall
 rules are required at this stage. I also switch the DNS resolver from resolver mode to
 forward mode, which avoids DNSSEC-related name resolution failures by forwarding queries
-to the configured upstream server.
+to the configured upstream server. 
 
 | VM | OS | Role | vCPU | RAM | Disk (on D:) | IP |
 |---|---|---|---|---|---|---|
 | `adeslab-fw1` | pfSense CE 2.7.2 | Firewall / NAT | 2 | 1 GB | 20 GB | WAN DHCP / LAN 10.0.254.1 |
-| `DC1` | Server 2022 Datacenter (Desktop Experience) | Primary DC, DNS, DHCP | 4 | 4 GB | 40 GB | 10.0.254.2 |
-| `DC2` | Server 2022 Datacenter Core | Secondary DC, DNS | 4 | 3 GB | 100 GB | 10.0.254.3 |
+| `DC1` | Server 2022 Datacenter (Desktop Experience) | Primary DC, DNS, DHCP | 4 | 4 GB | 40 GB | 10.0.254.10 |
+| `DC2` | Server 2022 Datacenter Core | Secondary DC, DNS | 4 | 3 GB | 100 GB | 10.0.254.11 |
 
 > The only adaptations from the reference lab are the hypervisor (VMware Workstation
 > instead of Proxmox) and the per-VM **RAM**, scaled to fit a 16 GB host (Mike uses
@@ -82,23 +82,26 @@ to the configured upstream server.
 
 **IP addressing — `10.0.254.0/24`:**
 
-| Host | Interface | IP | Assignment |
-|---|---|---|---|
-| `adeslab-fw1` | WAN | `192.168.x.x` | DHCP from VMnet8 |
-| `adeslab-fw1` | LAN | `10.0.254.1` | static — default gateway |
-| `DC1` | LAN | `10.0.254.2` | static |
-| `DC2` | LAN | `10.0.254.3` | static |
+The firewall's WAN sits on `VMnet8` and pulls a `192.168.170.x` address from VMware's NAT
+DHCP. On the lab LAN, addresses are allocated by purpose:
 
-Reserved ranges: `.1–.10` infrastructure (static), `.100–.200` DHCP pool, `.201–.254`
-reserved for future use (e.g. a VPN client pool).
+| Range | Assignment | Purpose |
+|---|---|---|
+| `10.0.254.1` | Default gateway | pfSense firewall (`adeslab-fw1`) |
+| `10.0.254.10` | `DC1` | Primary DC — AD DS, DNS, DHCP |
+| `10.0.254.11` | `DC2` | Secondary DC — AD DS, DNS |
+| `10.0.254.20–29` | Core infrastructure servers | static (e.g. SQL, file/print) |
+| `10.0.254.30–49` | Application / member servers | static |
+| `10.0.254.50–200` | DHCP client scope | dynamic — Windows 10/11 clients |
+| `10.0.254.201–254` | Management / networking | reserved |
 
 **DHCP and DNS:**
 
-- **DHCP** runs on **DC1** (Windows DHCP role), serving the `.100–.200` pool and
+- **DHCP** runs on **DC1** (Windows DHCP role), serving the `.50–.200` client scope and
   advertising both DCs as DNS servers and `10.0.254.1` as the gateway. pfSense's own
   DHCP server stays disabled.
-- **DCs** point their DNS at each other first, then themselves (DC1 → `10.0.254.3`,
-  then `127.0.0.1`; DC2 → `10.0.254.2`, then `127.0.0.1`) to avoid DNS islanding.
+- **DCs** point their DNS at each other first, then themselves (DC1 → `10.0.254.11`,
+  then `127.0.0.1`; DC2 → `10.0.254.10`, then `127.0.0.1`) to avoid DNS islanding.
 - **Domain members** (joined in later projects) will resolve via the DCs, never via
   pfSense. The DHCP role and pool are configured now so that future clients receive the
   correct DNS and gateway automatically. pfSense uses an upstream resolver for its own
@@ -106,11 +109,12 @@ reserved for future use (e.g. a VPN client pool).
 
 ## Server Configuration and Forest Creation
 
-1. Build `DC1` (Server 2022 Core), set a static IP of `10.0.254.2`, and rename the host.
+1. Build `DC1` (Server 2022 Desktop Experience), set a static IP of `10.0.254.10`, and
+   rename the host.
 2. Install the AD DS role and promote `DC1` to a new forest, `ad.adeslab.com`.
-3. Build `DC2` (Server 2022 Core), set `10.0.254.3`, join the domain, and promote it as
+3. Build `DC2` (Server 2022 Core), set `10.0.254.11`, join the domain, and promote it as
    a secondary domain controller and DNS server for redundancy.
-4. Configure DHCP on `DC1` to serve the `10.0.254.0/24` range and advertise both DCs as
+4. Configure DHCP on `DC1` to serve the `.50–.200` client scope and advertise both DCs as
    DNS servers.
 
 ## Creating Organizational Units, Groups and Users
