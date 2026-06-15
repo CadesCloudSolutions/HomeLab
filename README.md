@@ -36,11 +36,3 @@ VMs needed for the current project are powered on at once. Windows Server roles 
 | 05 | OpenVPN + RADIUS Authentication | ⚪ Planned |
 | 06 | OpenVPN Split-Tunnel | ⚪ Planned |
 | 07 | Azure Site-to-Site VPN (on-prem ↔ Azure) | ⚪ Planned |
-
-## Conventions
-
-- **Network:** the primary lab LAN is `10.0.254.0/24`, isolated from the home network.
-- **Naming:** forests `ad.adeslab.com` (Project 01) and `corp.cyrlab.com` (the forest
-  trust, Project 03); servers `DC1`, `DC2`, `adeslab-fw1`.
-- **Automation:** all build steps are captured as PowerShell scripts under each
-  project's `scripts/` folder so the lab is reproducible.
