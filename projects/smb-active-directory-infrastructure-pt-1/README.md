@@ -45,8 +45,6 @@ lab stays sealed off behind two layers of NAT.
 | WAN | `VMnet8` | NAT (built-in) | pfSense WAN gets an address by DHCP; provides internet via the host |
 | LAN | `VMnet2` | Host-only (custom) | Subnet `10.0.254.0/24`; **VMware DHCP disabled**; **no host adapter** (fully isolated) |
 
-![Isolated VMnet2 host-only network in the Virtual Network Editor — DHCP disabled, no host adapter](images/vmnet2-config.png)
-
 The pfSense virtual machine is given two virtual network adapters: its WAN connected to
 `VMnet8` (NAT) and its LAN connected to `VMnet2` (the isolated lab network). I give it
 two virtual CPUs, 1 GB of RAM and 20 GB of storage — for a lab that does not produce much
@@ -59,12 +57,9 @@ configurator is reached from `DC1` — which is installed with the Desktop Exper
 and also serves as the first domain controller — rather than from the host. On the first page of the
 configuration wizard I give the firewall a hostname of `adeslab-fw1` and a domain of
 `adeslab.internal`, keeping the firewall's namespace separate from the Active Directory
-domain since the firewall is not domain-joined. The primary DNS server is set temporarily
-to Cloudflare's `1.1.1.1`, to be changed once the domain controllers are online.
-
-![pfSense console after install — WAN on em0 (DHCP) and LAN on em1 set to 10.0.254.1](images/pfsense-console.png)
-
-![pfSense web configurator login, reached from DC1 across the isolated LAN](images/pfsense-login.png)
+domain since the firewall is not domain-joined. The DNS servers are set temporarily to
+Cloudflare's `1.1.1.1` and Google's `8.8.8.8`, to be changed once the domain controllers
+are online.
 
 I accept the defaults on the WAN interface, including the rules that block RFC 1918 and
 bogon networks, and set the LAN interface to `10.0.254.1/24`. I chose `10.0.254.0/24`
@@ -73,9 +68,7 @@ deliberately: a remote access VPN is added in a later project, and using the ver
 in. Out of the box pfSense performs NAT and allows all outbound traffic, so no firewall
 rules are required at this stage. I also switch the DNS resolver from resolver mode to
 forward mode, which avoids DNSSEC-related name resolution failures by forwarding queries
-to the configured upstream server.
-
-![pfSense setup wizard — General Information: hostname adeslab-fw1, domain adeslab.internal, DNS servers](images/pfsense-wizard-general.png)
+to the configured upstream servers.
 
 | VM | OS | Role | vCPU | RAM | Disk (on D:) | IP |
 |---|---|---|---|---|---|---|
@@ -132,9 +125,8 @@ DC1 (10.0.254.x)
   → host physical NIC → home router → Internet
 ```
 
-Outbound connectivity is confirmed by pinging a public address from the firewall:
-
-![Internet connectivity verified from pfSense — ping 8.8.8.8, 0% packet loss](images/pfsense-ping-test.png)
+Outbound connectivity is confirmed by pinging a public address (`8.8.8.8`) from the
+firewall, which replies with no packet loss.
 
 Because the lab LAN deliberately has no host adapter, the pfSense web configurator at
 `https://10.0.254.1` is **not** reachable from the host directly. It is managed from a
@@ -145,12 +137,36 @@ reference lab.
 
 ## Server Configuration and Forest Creation
 
-1. Build `DC1` (Server 2022 Desktop Experience), set a static IP of `10.0.254.10`, and
-   rename the host.
-2. Install the AD DS role and promote `DC1` to a new forest, `ad.adeslab.com`.
-3. Build `DC2` (Server 2022 Core), set `10.0.254.11`, join the domain, and promote it as
-   a secondary domain controller and DNS server for redundancy.
-4. On pfSense, set the DHCP scope's DNS option to advertise both DCs (`10.0.254.10` /
+1. On `DC1` (Server 2022 Desktop Experience), set a static IP of `10.0.254.10/24`,
+   gateway `10.0.254.1`, and DNS `127.0.0.1` (it will be its own DNS server); rename the
+   host to `DC1` and reboot.
+2. Promote `DC1` to the first domain controller of a new forest, `ad.adeslab.com`. The
+   deployment is captured as a script —
+   [`scripts/AdeslabADDSDeployment-DC1.ps1`](scripts/AdeslabADDSDeployment-DC1.ps1) —
+   which is **pulled onto the DC from this repository and run**, installing the AD DS role
+   and creating the forest with an integrated DNS server. The script prompts for the DSRM
+   (Safe Mode) password and reboots on completion:
+
+   ```powershell
+   # Temporarily resolve via pfSense so the script can be fetched from GitHub
+   Set-DnsClientServerAddress -InterfaceAlias "Ethernet0" -ServerAddresses 10.0.254.1
+
+   # Download the forest-deployment script from this repository
+   $url = "https://raw.githubusercontent.com/CadesCloudSolutions/HomeLab/main/projects/smb-active-directory-infrastructure-pt-1/scripts/AdeslabADDSDeployment-DC1.ps1"
+   New-Item -ItemType Directory -Path C:\Scripts -Force | Out-Null
+   Invoke-WebRequest -Uri $url -OutFile C:\Scripts\AdeslabADDSDeployment-DC1.ps1 -UseBasicParsing
+
+   # Unblock and run (prompts for the DSRM password, then reboots)
+   Unblock-File C:\Scripts\AdeslabADDSDeployment-DC1.ps1
+   & C:\Scripts\AdeslabADDSDeployment-DC1.ps1
+   ```
+
+3. After the reboot, log in as `AD\Administrator` and set DC1's **DNS forwarders** to
+   pfSense (`10.0.254.1`) so external names resolve through the firewall.
+4. Build `DC2` (Server 2022 Core), set `10.0.254.11`, join the domain, and promote it as
+   a secondary domain controller and DNS server (`Install-ADDSDomainController`) for
+   redundancy.
+5. On pfSense, set the DHCP scope's DNS option to advertise both DCs (`10.0.254.10` /
    `.11`) now that they are online.
 
 ## Creating Organizational Units, Groups and Users
