@@ -40,7 +40,7 @@ I gave the Pfsense virtual machine two virtual network adapters: its WAN connect
 `VMnet8` (NAT) and its LAN connected to `VMnet2` (the isolated lab network). I then gave it
 two virtual CPUs, 1 GB of RAM and 20 GB of storage - for a lab environment that does not produce much
 outbound traffic, this sizing works well. I then completed the Installation of the Pfsense firewall and tested it has outbound internet access.
-![alt text](image-1.png)
+![pfSense console ping to 8.8.8.8 returning 0% packet loss, confirming the firewall has outbound internet access](images/pfsense-test-internet-connection.png)
 
 
 After running through the pfSense installation I assigned the interfaces at the console:
@@ -48,7 +48,8 @@ WAN to the NAT adapter, which receives an address automatically, and LAN set to
 `10.0.254.1` with a /24 mask. Because the lab LAN is fully isolated, the pfSense web
 configurator is reached from `DC1` — rather than from the host. 
 
-![alt text](image.png)
+![pfSense web configurator login page, reached from DC1 over the isolated lab network](images/pfsense-login-page.png)
+
 
 
 
