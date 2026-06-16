@@ -40,34 +40,56 @@ I gave the Pfsense virtual machine two virtual network adapters: its WAN connect
 `VMnet8` (NAT) and its LAN connected to `VMnet2` (the isolated lab network). I then gave it
 two virtual CPUs, 1 GB of RAM and 20 GB of storage - for a lab environment that does not produce much
 outbound traffic, this sizing works well. I then completed the Installation of the Pfsense firewall and tested it has outbound internet access.
-![pfSense console ping to 8.8.8.8 returning 0% packet loss, confirming the firewall has outbound internet access](images/pfsense-test-internet-connection.png)
 
+![pfSense console ping to 8.8.8.8 returning 0% packet loss, confirming the firewall has outbound internet access](images/pfsense-test-internet-connection.png)
 
 After running through the pfSense installation I assigned the interfaces at the console:
 WAN to the NAT adapter, which receives an address automatically, and LAN set to
 `10.0.254.1` with a /24 mask. Because the lab LAN is fully isolated, the pfSense web
 configurator is reached from `DC1` — rather than from the host. 
 
+![Confirm Dc1 to pfsense firewall connectivity](images/DC1-to-firewall-access.png)
+
+
+
+
+
+I then logged in with the default username and password (admin, pfsense) and went through the initial firewall configuration.
+
 ![pfSense web configurator login page, reached from DC1 over the isolated lab network](images/pfsense-login-page.png)
-
-
-
 
 
 On the first page of the
 configuration wizard I give the firewall a hostname of `adeslab-fw1` and a domain of
 `adeslab.internal`, keeping the firewall's namespace separate from the Active Directory
 domain since the firewall will not be domain-joined. The DNS servers are set temporarily to
-Cloudflare's `1.1.1.1` and Google's `8.8.8.8`, to be changed once the primary and secondary domain controllers
+Cloudflare's `1.1.1.1` though this will be changed once the primary and secondary domain controllers
 are online.
 
+![pfsense-config](images/pfsense-config-1.png)
 
+I left the default time server and set London timezone and proceeded to WAN interface configuration and accepted all defaults, including the rules that restrct RPC 1918 and bogon (non-RFC 1918). This is because this lab's WAM sits behind VMware NAT so it has no effect on outbound traffic. LAN address was set to `10.0.254.1/24` subnet mask. Ise`10.0.254.0/24`because we will be setting up a remote access VPN on the firewall.
 
-I accept the defaults on the WAN interface, including the rules that block RFC 1918 and
-bogon networks, and set the LAN interface to `10.0.254.1/24`. I chose `10.0.254.0/24`
-deliberately: a remote access VPN is added in a later project, and using the very common
-`192.168.1.0/24` home-router network would cause IP conflicts for remote users connecting
-in. Out of the box pfSense performs NAT and allows all outbound traffic, so no firewall
+ It is important not to use the default 192.168.170.x/24 network due to the commonaility on home routers. If a remote employee whose home network uses that network connects via VPN, they will have difficulity reaching reosurces on the corporate LAN due to IP conflicts.
+
+ ![pfsense-config2](images/pfsense-config-2.png)
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ Out of the box pfSense performs NAT and allows all outbound traffic, so no firewall
 rules are required at this stage. I also switch the DNS resolver from resolver mode to
 forward mode, which avoids DNSSEC-related name resolution failures by forwarding queries
 to the configured upstream servers.
