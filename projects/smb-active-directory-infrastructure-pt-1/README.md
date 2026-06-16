@@ -3,23 +3,17 @@
 ## Introduction
 
 In this series of write-ups I document the setup and configuration of a medium-sized
-corporate domain, `ad.adeslab.com`, from initial domain controller promotion and core
-network services through to file sharing, group policy, a forest trust, remote access
-VPN, and hybrid identity with Microsoft Entra. The entire lab is built on a single
-workstation using VMware Workstation Pro, and is right-sized to run on 16 GB of RAM by
-deploying Windows Server roles as Server Core and powering on only the virtual machines
-a given stage requires.
+corporate domain, `ad.adeslab.com`, from initial DC promotion, configuring the network services, file sharing, group policy for basic security and standardization, to the creation of an hybrid identity with Microsoft Entra, remote access VPN, and backup and recovery of critical services and resources.
 
-I am creating a simple perimeter network with a pfSense firewall for isolation, and to
-support a remote access VPN in a later project. Because the focus of this lab is the
-configuration of essential IT services rather than network design, I am leaving the
-network unsegmented here. Segmentation with a router-on-a-stick topology is covered as a
-separate project; adding it to this build would introduce complexity that distracts from
-the application-layer services this project is about.
+
+
+I created a  simple perimeter network with a pfSense firewall for isolation, and to
+support a remote access VPN in a later  lab project. The main focus of this lab is the
+configuration of essential IT services , therefore i will be leaving the network unsegmented. 
 
 In this first write-up I go through initial forest creation, the promotion of domain
 controllers, the creation of the organizational unit structure, and the creation of
-users and groups.
+users and groups. Most of these tasks will be done with scripts i have pre-written.
 
 ## Table of Contents
 
@@ -31,35 +25,42 @@ users and groups.
 ## Basic Network Setup
 
 This project does not focus on network design or configuration; however, the lab network
-does need to be isolated from my home LAN and given a sensible IP addressing scheme. On
-Proxmox this isolation would be provided by an Open vSwitch bridge — in VMware Workstation
-the equivalent is a custom virtual network. I create a host-only network, `VMnet2`, in
-the Virtual Network Editor to act as the lab LAN (`10.0.254.0/24`), disable VMware's
-built-in DHCP on it, and leave its host virtual adapter disconnected so that my host PC
-has no presence on the lab network. For internet access I use VMware's built-in NAT
-network, `VMnet8`, which lets the firewall reach the internet through the host while the
-lab stays sealed off behind two layers of NAT.
+does need to be isolated from my home LAN and given a sensible IP addressing scheme. This is achieved in VMware Workstation
+by creating a custom virtual network. I created a host-only network, `VMnet2`, in
+the Virtual Network Editor to act as the lab LAN (`10.0.254.0/24`). I also disabled VMware's
+built-in DHCP on it, and left its host virtual adapter disconnected so that my host PC
+has no presence on the lab network. 
 
-| Side | VMnet | Type | Settings |
-|---|---|---|---|
-| WAN | `VMnet8` | NAT (built-in) | pfSense WAN gets an address by DHCP; provides internet via the host |
-| LAN | `VMnet2` | Host-only (custom) | Subnet `10.0.254.0/24`; **VMware DHCP disabled**; **no host adapter** (fully isolated) |
+PfSense firewall receives its WAN IP from VMware's NAT DHCP (acting as a client), and then serves its own DHCP on the LAN — which is why VMware's DHCP is left on for the NAT network but disabled on the lab LAN."
 
-The pfSense virtual machine is given two virtual network adapters: its WAN connected to
-`VMnet8` (NAT) and its LAN connected to `VMnet2` (the isolated lab network). I give it
-two virtual CPUs, 1 GB of RAM and 20 GB of storage — for a lab that does not produce much
-outbound traffic, this sizing is more than enough.
+For internet access I use VMware's built-in NAT
+network, `VMnet8`, which lets the firewall reach the internet through the host, sealing off the lab behind two layers of NAT. 
 
-After running through the pfSense installation I assign the interfaces at the console:
+I gave the Pfsense virtual machine two virtual network adapters: its WAN connected to
+`VMnet8` (NAT) and its LAN connected to `VMnet2` (the isolated lab network). I then gave it
+two virtual CPUs, 1 GB of RAM and 20 GB of storage - for a lab environment that does not produce much
+outbound traffic, this sizing works well. I then completed the Installation of the Pfsense firewall and tested it has outbound internet access.
+![alt text](image-1.png)
+
+
+After running through the pfSense installation I assigned the interfaces at the console:
 WAN to the NAT adapter, which receives an address automatically, and LAN set to
 `10.0.254.1` with a /24 mask. Because the lab LAN is fully isolated, the pfSense web
-configurator is reached from `DC1` — which is installed with the Desktop Experience (GUI)
-and also serves as the first domain controller — rather than from the host. On the first page of the
+configurator is reached from `DC1` — rather than from the host. 
+
+![alt text](image.png)
+
+
+
+
+On the first page of the
 configuration wizard I give the firewall a hostname of `adeslab-fw1` and a domain of
 `adeslab.internal`, keeping the firewall's namespace separate from the Active Directory
-domain since the firewall is not domain-joined. The DNS servers are set temporarily to
-Cloudflare's `1.1.1.1` and Google's `8.8.8.8`, to be changed once the domain controllers
+domain since the firewall will not be domain-joined. The DNS servers are set temporarily to
+Cloudflare's `1.1.1.1` and Google's `8.8.8.8`, to be changed once the primary and secondary domain controllers
 are online.
+
+
 
 I accept the defaults on the WAN interface, including the rules that block RFC 1918 and
 bogon networks, and set the LAN interface to `10.0.254.1/24`. I chose `10.0.254.0/24`
