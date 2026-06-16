@@ -36,3 +36,9 @@ VMs needed for the current project are powered on at once. Windows Server roles 
 | 05 | OpenVPN + RADIUS Authentication | ⚪ Planned |
 | 06 | OpenVPN Split-Tunnel | ⚪ Planned |
 | 07 | Azure Site-to-Site VPN (on-prem ↔ Azure) | ⚪ Planned |
+
+### Storage & Virtualisation
+
+| # | Project | Status |
+|---|---|---|
+| 08 | Shared Storage Lab (TrueNAS — iSCSI / NFS / SMB) | ⚪ Planned |
